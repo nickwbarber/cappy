@@ -85,7 +85,7 @@ key = {
     'GD[GDR]':'D',
     'GG[GGL]':'G',
     'GG[GGR]':'G'
-    }
+}
 
 def verify_answer(q_code, candidate):
     if key[q_code].lower() == candidate.lower():
