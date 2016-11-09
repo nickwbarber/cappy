@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-key = {
+pretest = {
     'PX[PXL]':'P',
     'PX[PXR]':'silence',
     'XT[XTL]':'silence',
@@ -12,7 +12,10 @@ key = {
     'DX[DXL]':'D',
     'DX[DXR]':'silence',
     'XG[XGL]':'silence',
-    'XG[XGR]':'G',
+    'XG[XGR]':'G'
+}
+
+key = {
     'PP[PPL]':'P',
     'PP[PPR]':'P',
     'PT[PTL]':'P',
@@ -88,7 +91,10 @@ key = {
 }
 
 def verify_answer(q_code, candidate):
-    if key[q_code].lower() == candidate.lower():
+    if candidate.lower() == key[q_code].lower():
+        return True
+    # count empty responses as correct if silence played
+    elif candidate == '' and key[q_code].lower() == 'silence':
         return True
     else:
         return False
