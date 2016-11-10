@@ -91,10 +91,21 @@ key = {
 }
 
 def verify_answer(q_code, candidate):
-    if candidate.lower() == key[q_code].lower():
-        return True
-    # count empty responses as correct if silence played
-    elif candidate == '' and key[q_code].lower() == 'silence':
-        return True
+
+    if q_code in key:
+        if candidate.lower() == key[q_code].lower():
+            return True
+        # count empty responses as correct if silence played
+        elif candidate == '' and key[q_code].lower() == 'silence':
+            return True
+        else:
+            return False
+    if q_code in pretest:
+        if candidate.lower() == pretest[q_code].lower():
+            return True
+        elif candidate == '' and pretest[q_code].lower() == 'silence':
+            return True
+        else:
+            return False
     else:
         return False
