@@ -6,6 +6,7 @@ import argparse
 import re
 from collections import namedtuple
 import numpy
+from scipy import stats
 import answer_key # 'key' as dict, defs verify_answer()
 
 # executable with command-line arguments
@@ -125,6 +126,8 @@ for score in scores:
     if int(score.languages) > 1: multis.append(score)
     else: monos.append(score)
 
+#print(stats.normaltest([ x.pct_correct for x in monos ]))
+#print(stats.normaltest([ x.pct_correct for x in multis ]))
 mono_mean = numpy.mean([ x.pct_correct for x in monos ])
 print('mean of monos = {}'.format(mono_mean))
 multi_mean = numpy.mean([ x.pct_correct for x in multis ])
@@ -150,5 +153,5 @@ tvalue = (
 
 print('t-value = {}'.format(tvalue))
 
-ling_dof = len(monos) + len(multis) - 2
-print('degrees of freedom = {}'.format(ling_dof))
+lang_df = len(monos) + len(multis) - 2
+print('degrees of freedom = {}'.format(lang_df))
