@@ -5,6 +5,7 @@ import csv
 import argparse
 import re
 from collections import namedtuple
+import numpy
 import answer_key # 'key' as dict, defs verify_answer()
 
 # executable with command-line arguments
@@ -33,7 +34,7 @@ scores = []
 # only consider completed responses
 complete_responses = []
 for response in responses:
-    if int(response['lastpage']) == 45: # total pages in survey
+    if int(response['lastpage']) == 47: # total pages in survey
         complete_responses.append(response)
 responses.clear() # clear, now that we're done
 total_complete_responses = len(complete_responses)
@@ -118,5 +119,36 @@ for response in valid_responses:
 
 valid_responses.clear() # clear from memory once done
 
+monos = []
+multis = []
 for score in scores:
-    print(score)
+    if int(score.languages) > 1: multis.append(score)
+    else: monos.append(score)
+
+mono_mean = numpy.mean([ x.pct_correct for x in monos ])
+print('mean of monos = {}'.format(mono_mean))
+multi_mean = numpy.mean([ x.pct_correct for x in multis ])
+print('mean of multis = {}'.format(multi_mean))
+mono_std = numpy.std([ x.pct_correct for x in monos ])
+print('std of monos = {}'.format(mono_std))
+multi_std = numpy.std([ x.pct_correct for x in multis ])
+print('std of multis = {}'.format(multi_std))
+mono_var = mono_std ** 2
+print('var of monos = {}'.format(mono_var))
+multi_var = multi_std ** 2
+print('var of multis = {}'.format(multi_var))
+
+tvalue = (
+    abs(
+        (mono_mean - multi_mean)
+        / (
+            (mono_var / len(monos))
+            + (multi_var / len(multis))
+            ) ** (1/2) # sqrt
+        )
+    )
+
+print('t-value = {}'.format(tvalue))
+
+ling_dof = len(monos) + len(multis) - 2
+print('degrees of freedom = {}'.format(ling_dof))
