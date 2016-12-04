@@ -151,9 +151,6 @@ for response in valid_responses:
 
 valid_responses.clear() # clear from memory once done
 
-for score in scores:
-    print(score)
-
 #TODO: make this a function to be used for each test condition
 #def ttest():
 monos = []
