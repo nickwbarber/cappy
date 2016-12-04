@@ -13,7 +13,46 @@ pretest = {
     'DX[DXR]':'silence',
     'XG[XGL]':'silence',
     'XG[XGR]':'G'
-}
+    }
+
+prompt_groups = (
+    'PP',
+    'PT',
+    'PK',
+    'PB',
+    'PD',
+    'PG',
+    'TP',
+    'TT',
+    'TK',
+    'TB',
+    'TD',
+    'TG',
+    'KP',
+    'KT',
+    'KK',
+    'KB',
+    'KD',
+    'KG',
+    'BP',
+    'BT',
+    'BK',
+    'BB',
+    'BD',
+    'BG',
+    'DP',
+    'DT',
+    'DK',
+    'DB',
+    'DD',
+    'DG',
+    'GP',
+    'GT',
+    'GK',
+    'GB',
+    'GD',
+    'GG'
+    )
 
 key = {
     'PP[PPL]':'P',
@@ -88,7 +127,7 @@ key = {
     'GD[GDR]':'D',
     'GG[GGL]':'G',
     'GG[GGR]':'G'
-}
+    }
 
 def verify_answer(q_code, candidate):
 
