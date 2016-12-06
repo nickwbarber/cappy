@@ -18,13 +18,15 @@ parser = argparse.ArgumentParser(
         )
     )
 parser.add_argument(
-    '-c', '--csv_output',
+    '-d', '--dry-run',
+    dest='dry_run',
     default=False,
     action='store_true',
-    help='''outputs csv-formatted line.'''
+    help='''displays statistics to terminal.'''
     )
 parser.add_argument(
-    '--indep_vars',
+    '--indep-vars',
+    dest='indep_vars',
     type=str,
     required=True,
     nargs='+',
@@ -43,17 +45,26 @@ parser.add_argument(
         '''and 'any' considers all correct answers in total.'''
     )
 parser.add_argument(
-    '--response_set',
+    '--response-set',
+    dest='response_set',
     required=True,
     type=str,
     help='''the source CSV file containing results '''
         '''from dichotic listening test'''
     )
 parser.add_argument(
-    '--stats_file',
+    '--ttest',
+    dest='ttest_file',
     type=str,
     default=False,
     help='''the destination to output a stats file, if specified'''
+    )
+parser.add_argument(
+    '--raw-scores',
+    dest='raw_scores',
+    type=str,
+    default=False,
+    help='''outputs individual scores to CSV file.'''
     )
 
 args = parser.parse_args()
@@ -69,26 +80,26 @@ valid_conditions = [
     'any'
     ]
 
+indep_vars = args.indep_vars
+conditions = args.conditions
+response_set = args.response_set
+ttest_file = args.ttest_file
+raw_scores = args.raw_scores
+dry_run = args.dry_run
+
 # validate indep. and dep. variables
 indep_vars_validity = True
-for i in args.indep_vars:
+for i in indep_vars:
     if i not in valid_indep_vars:
         print("Error: '{}' not a valid independent variable to consider.".format(i))
         indep_vars_validity = False
 conditions_validity = True
-for i in args.conditions:
+for i in conditions:
     if i not in valid_conditions:
         print("Error: '{}' not a valid condition to consider.".format(i))
         condition_validity = False
 if not valid_indep_vars or not valid_conditions:
     quit()
-
-indep_vars = args.indep_vars
-conditions = args.conditions
-
-response_set = args.response_set
-csv_output = args.csv_output
-stats_file = args.stats_file
 
 Stat = namedtuple(
     'Stat', [
@@ -176,7 +187,7 @@ def ttest(scores=False, indep_var=False, condition=False):
         )
 
 # collect responses, one per row
-with open(response_set) as response_csv:
+with open(response_set, newline='') as response_csv:
     responses = [ response for response in csv.DictReader(response_csv) ]
 total_responses = len(responses) # tally for later
 
@@ -207,7 +218,6 @@ total_valid_responses = len(valid_responses)
 print('{} responses'.format(total_responses))
 print('{} complete responses'.format(total_complete_responses))
 print('{} valid, complete responses'.format(total_valid_responses))
-print('')
 
 
 # for calculation of ratios
@@ -273,10 +283,10 @@ for response in valid_responses:
                         group_right_correct = True
         if group_left_correct and group_right_correct: both_correct += 1
 
-    pct_correct = round(total_correct/total_prompts,2)
-    pct_left_correct = round(left_correct/num_left_prompts,2)
-    pct_right_correct = round(right_correct/num_right_prompts,2)
-    pct_both_correct = round(both_correct/num_paired_prompts,2)
+    pct_correct = total_correct/total_prompts
+    pct_left_correct = left_correct/num_left_prompts
+    pct_right_correct = right_correct/num_right_prompts
+    pct_both_correct = both_correct/num_paired_prompts
 
     # tabulate scores
     scores.append(
@@ -298,27 +308,8 @@ for response in valid_responses:
 valid_responses.clear() # clear from memory once done
 
 
-if csv_output:
-    if not stats_file:
-        print('Error: Must specify output file when in CSV mode!')
-        quit()
-    with open(stats_file, 'w', newline='') as f:
-        csv.writer(f).writerow(
-            ('response_set',
-                'indep_var',
-                'condition',
-                'sample1_name',
-                'sample2_name',
-                'sample1_mean',
-                'sample2_mean',
-                'sample1_std',
-                'sample2_std',
-                'sample1_var',
-                'sample2_var',
-                'df',
-                'tvalue'
-                )
-            )
+if dry_run:
+    if ttest_file:
         for indep_var in indep_vars:
             for condition in conditions:
                 statistic = ttest(
@@ -326,58 +317,54 @@ if csv_output:
                     indep_var=indep_var,
                     condition=condition
                     )
-                csv.writer(f).writerow((
-                        statistic.response_set,
-                        statistic.indep_var,
-                        statistic.condition,
-                        statistic.sample1_name,
-                        statistic.sample2_name,
-                        statistic.sample1_mean,
-                        statistic.sample2_mean,
-                        statistic.sample1_std,
-                        statistic.sample2_std,
-                        statistic.sample1_var,
-                        statistic.sample2_var,
-                        statistic.df,
-                        statistic.tvalue
+                print('')
+                print("results file = '{}'".format(statistic.response_set))
+                print('independent variable = {}'.format(statistic.indep_var))
+                print('condition = {}'.format(statistic.condition))
+                print('mean of {} = {}'.format(
+                        statistic.sample1_name, statistic.sample1_mean
                         )
                     )
-else:
-    for indep_var in indep_vars:
-        for condition in conditions:
-            statistic = ttest(
-                scores=scores,
-                indep_var=indep_var,
-                condition=condition
-                )
-            print('')
-            print("results file = '{}'".format(statistic.response_set))
-            print('independent variable = {}'.format(statistic.indep_var))
-            print('condition = {}'.format(statistic.condition))
-            print('mean of {} = {}'.format(
-                    statistic.sample1_name, statistic.sample1_mean
+                print('mean of {} = {}'.format(
+                        statistic.sample2_name, statistic.sample2_mean
+                        )
                     )
-                )
-            print('mean of {} = {}'.format(
-                    statistic.sample2_name, statistic.sample2_mean
+                print('std of {} = {}'.format(
+                        statistic.sample1_name, statistic.sample1_std
+                        )
                     )
-                )
-            print('std of {} = {}'.format(
-                    statistic.sample1_name, statistic.sample1_std
+                print('std of {} = {}'.format(
+                        statistic.sample2_name, statistic.sample2_std
+                        )
                     )
-                )
-            print('std of {} = {}'.format(
-                    statistic.sample2_name, statistic.sample2_std
+                print('var of {} = {}'.format(
+                        statistic.sample1_name, statistic.sample1_var
+                        )
                     )
-                )
-            print('var of {} = {}'.format(
-                    statistic.sample1_name, statistic.sample1_var
+                print('var of {} = {}'.format(
+                        statistic.sample2_name, statistic.sample2_var
+                        )
                     )
-                )
-            print('var of {} = {}'.format(
-                    statistic.sample2_name, statistic.sample2_var
-                    )
-                )
-            print('t-value = {}'.format(statistic.tvalue))
+                print('t-value = {}'.format(statistic.tvalue))
 
-            print('degrees of freedom = {}'.format(statistic.df))
+                print('degrees of freedom = {}'.format(statistic.df))
+    if raw_scores:
+        print(','.join(Score._fields))
+if dry_run: quit()
+
+if ttest_file:
+    with open(ttest_file, 'w', encoding='utf-8', newline='') as f:
+        csv.writer(f).writerow(Stat._fields)
+        for indep_var in indep_vars:
+            for condition in conditions:
+                statistic = ttest(
+                    scores=scores,
+                    indep_var=indep_var,
+                    condition=condition
+                    )
+                csv.writer(f).writerow(statistic)
+if raw_scores:
+    with open(raw_scores, 'w', encoding='utf-8', newline='') as f:
+        csv.writer(f).writerow(Score._fields)
+        for score in scores:
+            csv.writer(f).writerow(score)
