@@ -5,8 +5,9 @@ import csv
 import argparse
 import re
 from collections import namedtuple
-import numpy
+import numpy as np
 from scipy import stats
+import matplotlib.pyplot as plt
 import answer_key
 
 
@@ -138,25 +139,25 @@ def ttest(scores=False, indep_var=False, condition=False):
     #print(stats.normaltest([ x.pct_left_correct for x in sample1 ]))
     #print(stats.normaltest([ x.pct_left_correct for x in sample2 ]))
     if condition == 'left':
-        sample1_mean = numpy.mean([ x.pct_left_correct for x in sample1 ])
-        sample2_mean = numpy.mean([ x.pct_left_correct for x in sample2 ])
-        sample1_std = numpy.std([ x.pct_left_correct for x in sample1 ])
-        sample2_std = numpy.std([ x.pct_left_correct for x in sample2 ])
+        sample1_mean = np.mean([ x.pct_left_correct for x in sample1 ])
+        sample2_mean = np.mean([ x.pct_left_correct for x in sample2 ])
+        sample1_std = np.std([ x.pct_left_correct for x in sample1 ])
+        sample2_std = np.std([ x.pct_left_correct for x in sample2 ])
     elif condition == 'right':
-        sample1_mean = numpy.mean([ x.pct_right_correct for x in sample1 ])
-        sample2_mean = numpy.mean([ x.pct_right_correct for x in sample2 ])
-        sample1_std = numpy.std([ x.pct_right_correct for x in sample1 ])
-        sample2_std = numpy.std([ x.pct_right_correct for x in sample2 ])
+        sample1_mean = np.mean([ x.pct_right_correct for x in sample1 ])
+        sample2_mean = np.mean([ x.pct_right_correct for x in sample2 ])
+        sample1_std = np.std([ x.pct_right_correct for x in sample1 ])
+        sample2_std = np.std([ x.pct_right_correct for x in sample2 ])
     elif condition == 'both':
-        sample1_mean = numpy.mean([ x.pct_both_correct for x in sample1 ])
-        sample2_mean = numpy.mean([ x.pct_both_correct for x in sample2 ])
-        sample1_std = numpy.std([ x.pct_both_correct for x in sample1 ])
-        sample2_std = numpy.std([ x.pct_both_correct for x in sample2 ])
+        sample1_mean = np.mean([ x.pct_both_correct for x in sample1 ])
+        sample2_mean = np.mean([ x.pct_both_correct for x in sample2 ])
+        sample1_std = np.std([ x.pct_both_correct for x in sample1 ])
+        sample2_std = np.std([ x.pct_both_correct for x in sample2 ])
     elif condition == 'any':
-        sample1_mean = numpy.mean([ x.pct_correct for x in sample1 ])
-        sample2_mean = numpy.mean([ x.pct_correct for x in sample2 ])
-        sample1_std = numpy.std([ x.pct_correct for x in sample1 ])
-        sample2_std = numpy.std([ x.pct_correct for x in sample2 ])
+        sample1_mean = np.mean([ x.pct_correct for x in sample1 ])
+        sample2_mean = np.mean([ x.pct_correct for x in sample2 ])
+        sample1_std = np.std([ x.pct_correct for x in sample1 ])
+        sample2_std = np.std([ x.pct_correct for x in sample2 ])
 
     sample1_var = sample1_std ** 2
     sample2_var = sample2_std ** 2
@@ -214,12 +215,6 @@ for response in complete_responses:
 complete_responses.clear()
 total_valid_responses = len(valid_responses)
 
-# print response statistics
-print('{} responses'.format(total_responses))
-print('{} complete responses'.format(total_complete_responses))
-print('{} valid, complete responses'.format(total_valid_responses))
-
-
 # for calculation of ratios
 left_prompts = [x for x in answer_key.key if 'l' in x.lower()]
 right_prompts = [x for x in answer_key.key if 'r' in x.lower()]
@@ -242,10 +237,12 @@ Score = namedtuple(
         'right_correct',
         'both_correct',
         'total_correct',
+        'both_empty',
         'pct_left_correct',
         'pct_right_correct',
         'pct_both_correct',
-        'pct_correct'
+        'pct_correct',
+        'pct_both_empty'
         ]
     )
 
@@ -258,6 +255,7 @@ for response in valid_responses:
     left_correct = 0
     right_correct = 0
     both_correct = 0
+    both_empty = 0
 
     answers = {}
     for column in response:
@@ -274,19 +272,30 @@ for response in valid_responses:
     for prompt_group in answer_key.prompt_groups:
         group_left_correct = False
         group_right_correct = False
+        group_left_empty = False
+        group_right_empty = False
         for q_code in answers:
             if prompt_group in q_code:
-                if answers[q_code].lower() == key.get(q_code).lower():
-                    if 'l' in q_code.lower():
+                if 'l' in q_code.lower():
+                    if answers[q_code].lower() == key.get(q_code).lower():
                         group_left_correct = True
-                    if 'r' in q_code.lower():
+                    if answers[q_code].lower() == '':
+                        group_left_empty = True
+                if 'r' in q_code.lower():
+                    if answers[q_code].lower() == key.get(q_code).lower():
                         group_right_correct = True
-        if group_left_correct and group_right_correct: both_correct += 1
+                    if answers[q_code].lower() == '':
+                        group_right_empty = True
+        if group_left_correct and group_right_correct:
+            both_correct += 1
+        if group_left_empty and group_right_empty:
+            both_empty += 1
 
     pct_correct = total_correct/total_prompts
     pct_left_correct = left_correct/num_left_prompts
     pct_right_correct = right_correct/num_right_prompts
     pct_both_correct = both_correct/num_paired_prompts
+    pct_both_empty = both_empty/num_paired_prompts
 
     # tabulate scores
     scores.append(
@@ -299,14 +308,30 @@ for response in valid_responses:
             right_correct=right_correct,
             both_correct=both_correct,
             total_correct=total_correct,
+            both_empty=both_empty,
             pct_left_correct=pct_left_correct,
             pct_right_correct=pct_right_correct,
             pct_both_correct=pct_both_correct,
-            pct_correct=pct_correct
+            pct_correct=pct_correct,
+            pct_both_empty=pct_both_empty
             )
         )
 valid_responses.clear() # clear from memory once done
+scores = tuple(scores)
 
+num_empty_responses = len(
+    [score for score in scores if score.pct_both_empty > (1/3)]
+    )
+print(
+    [score for score in scores if score.pct_both_empty > (1/3)]
+    )
+
+
+# print response statistics
+print('{} responses'.format(total_responses))
+print('{} complete responses'.format(total_complete_responses))
+print('{} valid, complete responses'.format(total_valid_responses))
+print('{} valid, complete responses with more than 1/3 empty'.format(num_empty_responses))
 
 if dry_run:
     if ttest_file:
@@ -368,3 +393,12 @@ if raw_scores:
         csv.writer(f).writerow(Score._fields)
         for score in scores:
             csv.writer(f).writerow(score)
+
+else:
+    print(type(scores))
+    x = np.array([float(score.pct_correct) for score in scores if int(score.languages) <= 1])
+    y = np.array([float(score.pct_correct) for score in scores if int(score.languages) > 1])
+    plt.figure()
+    plt.boxplot([x,y])
+    plt.axis([0,3,0,1.2])
+    plt.show()
