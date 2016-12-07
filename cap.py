@@ -244,7 +244,8 @@ Score = namedtuple(
         'pct_right_correct',
         'pct_both_correct',
         'pct_correct',
-        'pct_both_empty'
+        'pct_both_empty',
+        'right_left_ratio'
         ]
     )
 
@@ -298,6 +299,7 @@ for response in valid_responses:
     pct_right_correct = right_correct/num_right_prompts
     pct_both_correct = both_correct/num_paired_prompts
     pct_both_empty = both_empty/num_paired_prompts
+    right_left_ratio= right_correct / left_correct
 
     # tabulate scores
     scores.append(
@@ -315,25 +317,24 @@ for response in valid_responses:
             pct_right_correct=float(pct_right_correct),
             pct_both_correct=float(pct_both_correct),
             pct_correct=float(pct_correct),
-            pct_both_empty=float(pct_both_empty)
+            pct_both_empty=float(pct_both_empty),
+            right_left_ratio=right_left_ratio
             )
         )
 valid_responses.clear() # clear from memory once done
 scores = tuple(scores)
 
 num_empty_responses = len(
-    [score for score in scores if score.pct_both_empty > (1/3)]
-    )
-print(
-    [score for score in scores if score.pct_both_empty > (1/3)]
+    [score for score in scores if score.pct_both_empty >= (1/3)]
     )
 
+scores = [score for score in scores if score.pct_both_empty < (1/3)]
 
 # print response statistics
 print('{} responses'.format(total_responses))
 print('{} complete responses'.format(total_complete_responses))
 print('{} valid, complete responses'.format(total_valid_responses))
-print('{} valid, complete responses with more than 1/3 empty'.format(num_empty_responses))
+print('{} valid, complete responses with more than 1/3 of question groups empty'.format(num_empty_responses))
 
 if dry_run:
     if ttest_file:
@@ -397,17 +398,36 @@ if raw_scores:
             csv.writer(f).writerow(score)
 
 else:
-    #x = np.array([float(score.pct_correct) for score in scores if int(score.languages) <= 1])
-    #y = np.array([float(score.pct_correct) for score in scores if int(score.languages) > 1])
-
     doof = pandas.DataFrame.from_dict([score._asdict() for score in scores])
+
+
     plt.figure()
-    #sns.set(style='whitegrid', palette='pastel', color_codes=True)
+    plt.xlim(0, 1)
     sns.set_context(context='poster')
-    sns.violinplot(x=doof.languages, y=doof.pct_both_correct, hue=doof.sex, split=True)
-    #sns.boxplot(x=doof.languages, y=doof.pct_both_correct)
-    plt.show()
-    '''
-    plt.boxplot([x,y])
-    plt.axis([0,3,0,1])
-    '''
+    sns.distplot(doof.pct_correct)
+    plt.title('distribution of scores, condition: any')
+    plt.xlabel('percent answers correct')
+    plt.ylabel('participants')
+    plt.savefig('figures/dist_all_any.pdf', format='pdf')
+
+    plt.figure()
+    plt.xlim(0, 2)
+    sns.set_context(context='poster')
+    sns.boxplot(x=doof.right_left_ratio, orient='h')
+    plt.plot([1,1], [-3,3], 'r-', linewidth=1.5)
+    plt.title('ear advantage and languages spoken')
+    plt.xlabel('correct right : correct left')
+    plt.ylabel('languages spoken')
+    plt.savefig('figures/ratio_lang_right_left.pdf', format='pdf')
+
+    plt.figure()
+    plt.ylim(0, 1)
+    sns.set_context(context='poster')
+    sns.swarmplot(x=doof.languages, y=doof.pct_correct, orient='v')
+    plt.title('distribution of scores, condition: any')
+    plt.xlabel('languages spoken')
+    plt.ylabel('percent correct')
+    plt.savefig('figures/swarm_lang_any.pdf', format='pdf')
+
+    #fig, axarr = plt.subplots(2, sharex=True)
+    #sns.jointplot('right_left_ratio', 'languages', data=doof, kind='reg')
