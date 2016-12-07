@@ -8,6 +8,8 @@ from collections import namedtuple
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas
 import answer_key
 
 
@@ -303,17 +305,17 @@ for response in valid_responses:
             id=response['id'],
             age=response['Age'],
             sex=response['Sex'],
-            languages=response['Languages'],
-            left_correct=left_correct,
-            right_correct=right_correct,
-            both_correct=both_correct,
-            total_correct=total_correct,
-            both_empty=both_empty,
-            pct_left_correct=pct_left_correct,
-            pct_right_correct=pct_right_correct,
-            pct_both_correct=pct_both_correct,
-            pct_correct=pct_correct,
-            pct_both_empty=pct_both_empty
+            languages=int(response['Languages']),
+            left_correct=int(left_correct),
+            right_correct=int(right_correct),
+            both_correct=int(both_correct),
+            total_correct=int(total_correct),
+            both_empty=int(both_empty),
+            pct_left_correct=float(pct_left_correct),
+            pct_right_correct=float(pct_right_correct),
+            pct_both_correct=float(pct_both_correct),
+            pct_correct=float(pct_correct),
+            pct_both_empty=float(pct_both_empty)
             )
         )
 valid_responses.clear() # clear from memory once done
@@ -395,10 +397,17 @@ if raw_scores:
             csv.writer(f).writerow(score)
 
 else:
-    print(type(scores))
-    x = np.array([float(score.pct_correct) for score in scores if int(score.languages) <= 1])
-    y = np.array([float(score.pct_correct) for score in scores if int(score.languages) > 1])
+    #x = np.array([float(score.pct_correct) for score in scores if int(score.languages) <= 1])
+    #y = np.array([float(score.pct_correct) for score in scores if int(score.languages) > 1])
+
+    doof = pandas.DataFrame.from_dict([score._asdict() for score in scores])
     plt.figure()
-    plt.boxplot([x,y])
-    plt.axis([0,3,0,1.2])
+    #sns.set(style='whitegrid', palette='pastel', color_codes=True)
+    sns.set_context(context='poster')
+    sns.violinplot(x=doof.languages, y=doof.pct_both_correct, hue=doof.sex, split=True)
+    #sns.boxplot(x=doof.languages, y=doof.pct_both_correct)
     plt.show()
+    '''
+    plt.boxplot([x,y])
+    plt.axis([0,3,0,1])
+    '''
