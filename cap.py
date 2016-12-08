@@ -47,7 +47,7 @@ parser.add_argument(
     required=True,
     nargs='+',
     help='''the experimental condition to consider. '''
-        '''Can be either 'left', 'right', 'both', or 'any'.'''
+        '''Can be 'left', 'right', 'only-left', 'only-right', 'both', or 'any'.'''
         ''''left' considers all left correct, 'both' considers each prompt '''
         '''in which both left and right were correct, '''
         '''and 'any' considers all correct answers in total.'''
@@ -84,6 +84,8 @@ valid_indep_vars = [
 valid_conditions = [
     'left',
     'right',
+    'only-left',
+    'only-right',
     'both',
     'any'
     ]
@@ -152,6 +154,16 @@ def ttest(scores=False, indep_var=False, condition=False):
         sample1_std = np.std([ x.pct_left_correct for x in sample1 ])
         sample2_std = np.std([ x.pct_left_correct for x in sample2 ])
     elif condition == 'right':
+        sample1_mean = np.mean([ x.pct_right_correct for x in sample1 ])
+        sample2_mean = np.mean([ x.pct_right_correct for x in sample2 ])
+        sample1_std = np.std([ x.pct_right_correct for x in sample1 ])
+        sample2_std = np.std([ x.pct_right_correct for x in sample2 ])
+    if condition == 'only-left':
+        sample1_mean = np.mean([ x.pct_only_left_correct for x in sample1 ])
+        sample2_mean = np.mean([ x.pct_only_left_correct for x in sample2 ])
+        sample1_std = np.std([ x.pct_only_left_correct for x in sample1 ])
+        sample2_std = np.std([ x.pct_only_left_correct for x in sample2 ])
+    elif condition == 'only-right':
         sample1_mean = np.mean([ x.pct_right_correct for x in sample1 ])
         sample2_mean = np.mean([ x.pct_right_correct for x in sample2 ])
         sample1_std = np.std([ x.pct_right_correct for x in sample1 ])
@@ -246,12 +258,16 @@ Score = namedtuple(
         'both_correct',
         'total_correct',
         'both_empty',
+        'only_left_correct',
+        'only_right_correct',
         'pct_left_correct',
         'pct_right_correct',
         'pct_both_correct',
         'pct_correct',
         'pct_both_empty',
-        'right_left_ratio'
+        'right_left_ratio',
+        'pct_only_left_correct',
+        'pct_only_right_correct'
         ]
     )
 
@@ -265,6 +281,8 @@ for response in valid_responses:
     right_correct = 0
     both_correct = 0
     both_empty = 0
+    only_left_correct = 0
+    only_right_correct = 0
 
     answers = {}
     for column in response:
@@ -299,6 +317,10 @@ for response in valid_responses:
             both_correct += 1
         if group_left_empty and group_right_empty:
             both_empty += 1
+        if group_left_correct and not group_right_correct:
+            only_left_correct += 1
+        if not group_left_correct and group_right_correct:
+            only_right_correct += 1
 
     pct_correct = total_correct/total_prompts
     pct_left_correct = left_correct/num_left_prompts
@@ -306,6 +328,8 @@ for response in valid_responses:
     pct_both_correct = both_correct/num_paired_prompts
     pct_both_empty = both_empty/num_paired_prompts
     right_left_ratio= right_correct / left_correct
+    pct_only_left_correct = only_left_correct / num_paired_prompts
+    pct_only_right_correct = only_right_correct / num_paired_prompts
 
     # tabulate scores
     scores.append(
@@ -319,12 +343,16 @@ for response in valid_responses:
             both_correct=int(both_correct),
             total_correct=int(total_correct),
             both_empty=int(both_empty),
+            only_left_correct=only_left_correct,
+            only_right_correct=only_right_correct,
             pct_left_correct=float(pct_left_correct),
             pct_right_correct=float(pct_right_correct),
             pct_both_correct=float(pct_both_correct),
             pct_correct=float(pct_correct),
             pct_both_empty=float(pct_both_empty),
-            right_left_ratio=right_left_ratio
+            right_left_ratio=right_left_ratio,
+            pct_only_left_correct=pct_only_left_correct,
+            pct_only_right_correct=pct_only_right_correct
             )
         )
 valid_responses.clear() # clear from memory once done
@@ -396,6 +424,28 @@ if figures:
     plt.ylim(0, 1)
     plt.yticks(np.arange(0,1, 0.1))
     sns.set_context(context='poster')
+    sns.swarmplot(x=doof.languages, y=doof.pct_only_left_correct, orient='v', size=15)
+    plt.title('distribution of scores, condition: only-left')
+    plt.xlabel('languages spoken')
+    plt.ylabel('percent only-left correct')
+    plt.savefig(os.path.join(figures, 'swarm_lang_only_left.pdf'), format='pdf')
+    plt.close()
+
+    plt.figure(figsize=(7,14))
+    plt.ylim(0, 1)
+    plt.yticks(np.arange(0,1, 0.1))
+    sns.set_context(context='poster')
+    sns.swarmplot(x=doof.languages, y=doof.pct_only_right_correct, orient='v', size=15)
+    plt.title('distribution of scores, condition: only-right')
+    plt.xlabel('languages spoken')
+    plt.ylabel('percent only-right correct')
+    plt.savefig(os.path.join(figures, 'swarm_lang_only_right.pdf'), format='pdf')
+    plt.close()
+
+    plt.figure(figsize=(7,14))
+    plt.ylim(0, 1)
+    plt.yticks(np.arange(0,1, 0.1))
+    sns.set_context(context='poster')
     sns.swarmplot(x=doof.languages, y=doof.pct_both_correct, orient='v', size=15)
     plt.title('distribution of scores, condition: both')
     plt.xlabel('languages spoken')
@@ -434,6 +484,28 @@ if figures:
     plt.xlabel('sex')
     plt.ylabel('percent right correct')
     plt.savefig(os.path.join(figures, 'swarm_sex_right.pdf'), format='pdf')
+    plt.close()
+
+    plt.figure(figsize=(7,14))
+    plt.ylim(0, 1)
+    plt.yticks(np.arange(0,1, 0.1))
+    sns.set_context(context='poster')
+    sns.swarmplot(x=doof.sex, y=doof.pct_only_left_correct, orient='v', size=15)
+    plt.title('distribution of scores, condition: only-left')
+    plt.xlabel('sex')
+    plt.ylabel('percent only-left correct')
+    plt.savefig(os.path.join(figures, 'swarm_sex_only_left.pdf'), format='pdf')
+    plt.close()
+
+    plt.figure(figsize=(7,14))
+    plt.ylim(0, 1)
+    plt.yticks(np.arange(0,1, 0.1))
+    sns.set_context(context='poster')
+    sns.swarmplot(x=doof.sex, y=doof.pct_only_right_correct, orient='v', size=15)
+    plt.title('distribution of scores, condition: only-right')
+    plt.xlabel('sex')
+    plt.ylabel('percent only-right correct')
+    plt.savefig(os.path.join(figures, 'swarm_sex-right.pdf'), format='pdf')
     plt.close()
 
     plt.figure(figsize=(7,14))
@@ -517,6 +589,28 @@ if figures:
     plt.ylim(0, 1)
     plt.yticks(np.arange(0,1, 0.1))
     sns.set_context(context='poster')
+    sns.boxplot(x=doof.languages, y=doof.pct_only_left_correct, orient='v')
+    plt.title('percent only-left correct by languages spoken')
+    plt.xlabel('languages spoken')
+    plt.ylabel('percent only-left correct')
+    plt.savefig(os.path.join(figures, 'box_lang_only_left.pdf'), format='pdf')
+    plt.close()
+
+    plt.figure(figsize=(7,14))
+    plt.ylim(0, 1)
+    plt.yticks(np.arange(0,1, 0.1))
+    sns.set_context(context='poster')
+    sns.boxplot(x=doof.languages, y=doof.pct_only_right_correct, orient='v')
+    plt.title('percent only-right correct by languages spoken')
+    plt.xlabel('languages spoken')
+    plt.ylabel('percent only-right correct')
+    plt.savefig(os.path.join(figures, 'box_lang_only_right.pdf'), format='pdf')
+    plt.close()
+
+    plt.figure(figsize=(7,14))
+    plt.ylim(0, 1)
+    plt.yticks(np.arange(0,1, 0.1))
+    sns.set_context(context='poster')
     sns.boxplot(x=doof.languages, y=doof.pct_both_correct, orient='v')
     plt.title('percent both correct by languages spoken')
     plt.xlabel('languages spoken')
@@ -561,6 +655,28 @@ if figures:
     plt.ylim(0, 1)
     plt.yticks(np.arange(0,1, 0.1))
     sns.set_context(context='poster')
+    sns.boxplot(x=doof.sex, y=doof.pct_only_left_correct, orient='v')
+    plt.title('percent only-left correct by sex')
+    plt.xlabel('sex')
+    plt.ylabel('percent only-left correct')
+    plt.savefig(os.path.join(figures, 'box_sex_only_left.pdf'), format='pdf')
+    plt.close()
+
+    plt.figure(figsize=(7,14))
+    plt.ylim(0, 1)
+    plt.yticks(np.arange(0,1, 0.1))
+    sns.set_context(context='poster')
+    sns.boxplot(x=doof.sex, y=doof.pct_only_right_correct, orient='v')
+    plt.title('percent only-right correct by sex')
+    plt.xlabel('sex')
+    plt.ylabel('percent only-right correct')
+    plt.savefig(os.path.join(figures, 'box_sex_only_right.pdf'), format='pdf')
+    plt.close()
+
+    plt.figure(figsize=(7,14))
+    plt.ylim(0, 1)
+    plt.yticks(np.arange(0,1, 0.1))
+    sns.set_context(context='poster')
     sns.boxplot(x=doof.sex, y=doof.pct_both_correct, orient='v')
     plt.title('percent both correct by sex')
     plt.xlabel('sex')
@@ -569,7 +685,7 @@ if figures:
     plt.close()
 
     # ratio
-    plt.figure()
+    plt.figure(figsize=(14,7))
     plt.xlim(0, 2)
     sns.set_context(context='poster')
     sns.boxplot(x=doof.right_left_ratio, orient='h')
@@ -579,7 +695,7 @@ if figures:
     plt.savefig(os.path.join(figures, 'box_all_adv.pdf'), format='pdf')
     plt.close()
 
-    plt.figure()
+    plt.figure(figsize=(14,7))
     plt.xlim(0, 2)
     sns.set_context(context='poster')
     sns.boxplot(x=doof.right_left_ratio, y=doof.languages, orient='h')
@@ -590,7 +706,7 @@ if figures:
     plt.savefig(os.path.join(figures, 'box_lang_adv.pdf'), format='pdf')
     plt.close()
 
-    plt.figure()
+    plt.figure(figsize=(14,7))
     plt.xlim(0, 2)
     sns.set_context(context='poster')
     sns.boxplot(x=doof.right_left_ratio, y=doof.sex, orient='h')
