@@ -47,7 +47,7 @@ parser.add_argument(
     required=True,
     nargs='+',
     help='''the experimental condition to consider. '''
-        '''Can be 'left', 'right', 'only-left', 'only-right', 'both', or 'any'.'''
+        '''Can be 'left', 'right', 'only-left', 'only-right', 'both', 'ratio', or 'any'.'''
         ''''left' considers all left correct, 'both' considers each prompt '''
         '''in which both left and right were correct, '''
         '''and 'any' considers all correct answers in total.'''
@@ -87,6 +87,7 @@ valid_conditions = [
     'only-left',
     'only-right',
     'both',
+    'ratio',
     'any'
     ]
 
@@ -178,6 +179,11 @@ def ttest(scores=False, indep_var=False, condition=False):
         sample2_mean = np.mean([ x.pct_correct for x in sample2 ])
         sample1_std = np.std([ x.pct_correct for x in sample1 ])
         sample2_std = np.std([ x.pct_correct for x in sample2 ])
+    elif condition == 'ratio':
+        sample1_mean = np.mean([ x.right_left_ratio for x in sample1 ])
+        sample2_mean = np.mean([ x.right_left_ratio for x in sample2 ])
+        sample1_std = np.std([ x.right_left_ratio for x in sample1 ])
+        sample2_std = np.std([ x.right_left_ratio for x in sample2 ])
 
     sample1_var = sample1_std ** 2
     sample2_var = sample2_std ** 2
@@ -359,10 +365,10 @@ valid_responses.clear() # clear from memory once done
 scores = tuple(scores)
 
 num_empty_responses = len(
-    [score for score in scores if score.pct_both_empty >= (1/3)]
+    [score for score in scores if score.pct_both_empty >= (1/4)]
     )
 
-scores = [score for score in scores if score.pct_both_empty < (1/3)]
+scores = [score for score in scores if score.pct_both_empty <= (1/4)]
 
 # print response statistics
 print('{} responses'.format(total_responses))
@@ -370,9 +376,69 @@ print('{} complete responses'.format(total_complete_responses))
 print('{} valid, complete responses'.format(total_valid_responses))
 print('{} valid, complete responses with more than 1/3 of question groups empty'.format(num_empty_responses))
 
+if dry_run:
+    if ttest_file:
+        for indep_var in indep_vars:
+            for condition in conditions:
+                statistic = ttest(
+                    scores=scores,
+                    indep_var=indep_var,
+                    condition=condition
+                    )
+                print('')
+                print("results file = '{}'".format(statistic.response_set))
+                print('independent variable = {}'.format(statistic.indep_var))
+                print('condition = {}'.format(statistic.condition))
+                print('mean of {} = {}'.format(
+                        statistic.sample1_name, statistic.sample1_mean
+                        )
+                    )
+                print('mean of {} = {}'.format(
+                        statistic.sample2_name, statistic.sample2_mean
+                        )
+                    )
+                print('std of {} = {}'.format(
+                        statistic.sample1_name, statistic.sample1_std
+                        )
+                    )
+                print('std of {} = {}'.format(
+                        statistic.sample2_name, statistic.sample2_std
+                        )
+                    )
+                print('var of {} = {}'.format(
+                        statistic.sample1_name, statistic.sample1_var
+                        )
+                    )
+                print('var of {} = {}'.format(
+                        statistic.sample2_name, statistic.sample2_var
+                        )
+                    )
+                print('t-value = {}'.format(statistic.tvalue))
+
+                print('degrees of freedom = {}'.format(statistic.df))
+    if raw_scores:
+        print(','.join(Score._fields))
+if dry_run: quit()
+
+if ttest_file:
+    with open(ttest_file, 'w', encoding='utf-8', newline='') as f:
+        csv.writer(f).writerow(Stat._fields)
+        for indep_var in indep_vars:
+            for condition in conditions:
+                statistic = ttest(
+                    scores=scores,
+                    indep_var=indep_var,
+                    condition=condition
+                    )
+                csv.writer(f).writerow(statistic)
+if raw_scores:
+    with open(raw_scores, 'w', encoding='utf-8', newline='') as f:
+        csv.writer(f).writerow(Score._fields)
+        for score in scores:
+            csv.writer(f).writerow(score)
+
 if figures:
     doof = pandas.DataFrame.from_dict([score._asdict() for score in scores])
-
 
     # dist
     plt.figure()
@@ -505,7 +571,7 @@ if figures:
     plt.title('distribution of scores, condition: only-right')
     plt.xlabel('sex')
     plt.ylabel('percent only-right correct')
-    plt.savefig(os.path.join(figures, 'swarm_sex-right.pdf'), format='pdf')
+    plt.savefig(os.path.join(figures, 'swarm_sex_only_right.pdf'), format='pdf')
     plt.close()
 
     plt.figure(figsize=(7,14))
@@ -732,65 +798,3 @@ if figures:
     plt.savefig(os.path.join(figures, 'corr_ratio_lang.pdf'), format='pdf')
     plt.close()
     '''
-
-if dry_run:
-    if ttest_file:
-        for indep_var in indep_vars:
-            for condition in conditions:
-                statistic = ttest(
-                    scores=scores,
-                    indep_var=indep_var,
-                    condition=condition
-                    )
-                print('')
-                print("results file = '{}'".format(statistic.response_set))
-                print('independent variable = {}'.format(statistic.indep_var))
-                print('condition = {}'.format(statistic.condition))
-                print('mean of {} = {}'.format(
-                        statistic.sample1_name, statistic.sample1_mean
-                        )
-                    )
-                print('mean of {} = {}'.format(
-                        statistic.sample2_name, statistic.sample2_mean
-                        )
-                    )
-                print('std of {} = {}'.format(
-                        statistic.sample1_name, statistic.sample1_std
-                        )
-                    )
-                print('std of {} = {}'.format(
-                        statistic.sample2_name, statistic.sample2_std
-                        )
-                    )
-                print('var of {} = {}'.format(
-                        statistic.sample1_name, statistic.sample1_var
-                        )
-                    )
-                print('var of {} = {}'.format(
-                        statistic.sample2_name, statistic.sample2_var
-                        )
-                    )
-                print('t-value = {}'.format(statistic.tvalue))
-
-                print('degrees of freedom = {}'.format(statistic.df))
-    if raw_scores:
-        print(','.join(Score._fields))
-if dry_run: quit()
-
-if ttest_file:
-    with open(ttest_file, 'w', encoding='utf-8', newline='') as f:
-        csv.writer(f).writerow(Stat._fields)
-        for indep_var in indep_vars:
-            for condition in conditions:
-                statistic = ttest(
-                    scores=scores,
-                    indep_var=indep_var,
-                    condition=condition
-                    )
-                csv.writer(f).writerow(statistic)
-if raw_scores:
-    with open(raw_scores, 'w', encoding='utf-8', newline='') as f:
-        csv.writer(f).writerow(Score._fields)
-        for score in scores:
-            csv.writer(f).writerow(score)
-
